@@ -9,32 +9,27 @@ class MainTabBarController: UITabBarController {
     }
     
     private func setupTabs() {
-        let appsVC = UIViewController() // Placeholder for AppLibraryViewController
-        appsVC.view.backgroundColor = .systemBackground
+        let appsVC = AppLibraryViewController()
         appsVC.title = "Apps"
         let appsNav = UINavigationController(rootViewController: appsVC)
         appsNav.tabBarItem = UITabBarItem(title: "Apps", image: UIImage(systemName: "square.grid.2x2"), tag: 0)
         
-        let signedVC = UIViewController() // Placeholder for SignedAppsViewController
-        signedVC.view.backgroundColor = .systemBackground
+        let signedVC = SignedAppsViewController()
         signedVC.title = "Signed"
         let signedNav = UINavigationController(rootViewController: signedVC)
         signedNav.tabBarItem = UITabBarItem(title: "Signed", image: UIImage(systemName: "checkmark.seal"), tag: 1)
         
-        let certsVC = UIViewController() // Placeholder for CertificateListViewController
-        certsVC.view.backgroundColor = .systemBackground
+        let certsVC = CertificateListViewController()
         certsVC.title = "Certs"
         let certsNav = UINavigationController(rootViewController: certsVC)
         certsNav.tabBarItem = UITabBarItem(title: "Certs", image: UIImage(systemName: "lock.shield"), tag: 2)
         
-        let filesVC = UIViewController() // Placeholder for FileManagerViewController
-        filesVC.view.backgroundColor = .systemBackground
+        let filesVC = FileManagerViewController()
         filesVC.title = "Files"
         let filesNav = UINavigationController(rootViewController: filesVC)
         filesNav.tabBarItem = UITabBarItem(title: "Files", image: UIImage(systemName: "folder"), tag: 3)
         
-        let settingsVC = UIViewController() // Placeholder for SettingsViewController
-        settingsVC.view.backgroundColor = .systemBackground
+        let settingsVC = SettingsViewController()
         settingsVC.title = "Settings"
         let settingsNav = UINavigationController(rootViewController: settingsVC)
         settingsNav.tabBarItem = UITabBarItem(title: "Settings", image: UIImage(systemName: "gearshape"), tag: 4)
