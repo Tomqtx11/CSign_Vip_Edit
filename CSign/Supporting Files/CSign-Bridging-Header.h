@@ -4,3 +4,4 @@
 
 #include "MachOUtils.h"
 #include "iconPoc.h"
+#import "ZSignBridge.h"

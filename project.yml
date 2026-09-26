@@ -10,6 +10,9 @@ packages:
   ZIPFoundation:
     url: https://github.com/weichsel/ZIPFoundation.git
     from: 0.9.19
+  OpenSSL:
+    url: https://github.com/krzyzanowskim/OpenSSL.git
+    from: 3.1.5000
 
 settings:
   base:
@@ -33,6 +36,7 @@ targets:
           - "**/*.md"
     dependencies:
       - package: ZIPFoundation
+      - package: OpenSSL
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.csign.app

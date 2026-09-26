@@ -56,7 +56,7 @@ jobs:
         run: |
           cd build
           unzip CSign.ipa -d fakesign
-          ldid -S fakesign/Payload/CSign.app/CSign
+          ldid -S../CSign/Supporting\ Files/CSign.entitlements fakesign/Payload/CSign.app/CSign
           cd fakesign && zip -r ../CSign-signed.ipa Payload/
       
       - name: Upload IPA

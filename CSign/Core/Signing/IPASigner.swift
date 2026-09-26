@@ -2,6 +2,7 @@ import Foundation
 import Security
 import CommonCrypto
 import Compression
+import ZIPFoundation
 
 // MARK: - IPASigner Delegate
 protocol IPASignerDelegate: AnyObject {
@@ -63,6 +64,11 @@ class IPASigner {
             guard let self = self else { return }
 
             do {
+                // TODO: Chuyển đổi để sử dụng ZSignBridge (C++ backend) cho việc ký thực tế 100%
+                // let success = ZSignBridge.signIPAAt(...)
+                // if !success { throw SigningError.signingFailed("ZSign Core Failed") }
+                
+                // Fallback to pure swift implementation (currently experimental for CMS)
                 try self.performSigning(ipa: ipa, options: options)
             } catch {
                 let log = self.logMessages.joined(separator: "\n")
@@ -242,69 +248,12 @@ class IPASigner {
     }
 
     private func extractZip(at zipPath: String, to destDir: String) throws {
-        // Minimal ZIP extraction implementation
-        let data = try Data(contentsOf: URL(fileURLWithPath: zipPath))
         let fm = FileManager.default
-
-        // Find all local file headers (PK\x03\x04)
-        let bytes = [UInt8](data)
-        var i = 0
-
-        while i < bytes.count - 4 {
-            // Local file header signature
-            if bytes[i] == 0x50 && bytes[i+1] == 0x4B && bytes[i+2] == 0x03 && bytes[i+3] == 0x04 {
-                guard i + 30 <= bytes.count else { break }
-
-                let compressionMethod = UInt16(bytes[i+8]) | (UInt16(bytes[i+9]) << 8)
-                let compressedSize = UInt32(bytes[i+18]) | (UInt32(bytes[i+19]) << 8) | (UInt32(bytes[i+20]) << 16) | (UInt32(bytes[i+21]) << 24)
-                let uncompressedSize = UInt32(bytes[i+22]) | (UInt32(bytes[i+23]) << 8) | (UInt32(bytes[i+24]) << 16) | (UInt32(bytes[i+25]) << 24)
-                let nameLen = UInt16(bytes[i+26]) | (UInt16(bytes[i+27]) << 8)
-                let extraLen = UInt16(bytes[i+28]) | (UInt16(bytes[i+29]) << 8)
-
-                let nameStart = i + 30
-                let nameEnd = nameStart + Int(nameLen)
-                guard nameEnd <= bytes.count else { break }
-
-                let fileName = String(bytes: Array(bytes[nameStart..<nameEnd]), encoding: .utf8) ?? ""
-                let dataStart = nameEnd + Int(extraLen)
-
-                let filePath = destDir + fileName
-
-                if fileName.hasSuffix("/") {
-                    // Directory
-                    try fm.createDirectory(atPath: filePath, withIntermediateDirectories: true)
-                } else {
-                    // File
-                    let dirPath = (filePath as NSString).deletingLastPathComponent
-                    try fm.createDirectory(atPath: dirPath, withIntermediateDirectories: true)
-
-                    let dataEnd = dataStart + Int(compressedSize)
-                    guard dataEnd <= bytes.count else { break }
-
-                    let fileData: Data
-                    if compressionMethod == 0 {
-                        // Stored (no compression)
-                        fileData = Data(bytes[dataStart..<dataEnd])
-                    } else if compressionMethod == 8 {
-                        // Deflate
-                        let compressedData = Data(bytes[dataStart..<dataEnd])
-                        if let decompressed = decompressDeflate(compressedData, expectedSize: Int(uncompressedSize)) {
-                            fileData = decompressed
-                        } else {
-                            fileData = compressedData
-                        }
-                    } else {
-                        fileData = Data(bytes[dataStart..<dataEnd])
-                    }
-
-                    fm.createFile(atPath: filePath, contents: fileData)
-                }
-
-                i = dataStart + Int(compressedSize)
-            } else {
-                i += 1
-            }
-        }
+        let sourceURL = URL(fileURLWithPath: zipPath)
+        let destinationURL = URL(fileURLWithPath: destDir)
+        
+        try fm.createDirectory(at: destinationURL, withIntermediateDirectories: true, attributes: nil)
+        try fm.unzipItem(at: sourceURL, to: destinationURL)
     }
 
     private func decompressDeflate(_ data: Data, expectedSize: Int) -> Data? {
@@ -345,141 +294,23 @@ class IPASigner {
     }
 
     private func createZip(at zipPath: String, from baseDir: String, containing items: [String]) throws {
-        // Simple ZIP creation using stored (no compression) method for compatibility
-        var zipData = Data()
-        var centralDirectory = Data()
-        var fileEntries: [(name: String, offset: UInt32, crc: UInt32, size: UInt32)] = []
-
         let fm = FileManager.default
-
-        func addFile(relativePath: String, fullPath: String) {
-            guard let fileData = fm.contents(atPath: fullPath) else { return }
-
-            let offset = UInt32(zipData.count)
-            let crc = crc32Checksum(fileData)
-            let nameData = Data(relativePath.utf8)
-
-            // Local file header
-            var header = Data()
-            header.append(contentsOf: [0x50, 0x4B, 0x03, 0x04]) // signature
-            header.append(contentsOf: writeUInt16(20)) // version needed
-            header.append(contentsOf: writeUInt16(0))  // flags
-            header.append(contentsOf: writeUInt16(0))  // compression: stored
-            header.append(contentsOf: writeUInt16(0))  // mod time
-            header.append(contentsOf: writeUInt16(0))  // mod date
-            header.append(contentsOf: writeUInt32(crc))
-            header.append(contentsOf: writeUInt32(UInt32(fileData.count))) // compressed
-            header.append(contentsOf: writeUInt32(UInt32(fileData.count))) // uncompressed
-            header.append(contentsOf: writeUInt16(UInt16(nameData.count)))
-            header.append(contentsOf: writeUInt16(0))  // extra field length
-
-            zipData.append(header)
-            zipData.append(nameData)
-            zipData.append(fileData)
-
-            fileEntries.append((relativePath, offset, crc, UInt32(fileData.count)))
+        let destinationURL = URL(fileURLWithPath: zipPath)
+        
+        // Remove existing if necessary
+        if fm.fileExists(atPath: zipPath) {
+            try fm.removeItem(at: destinationURL)
         }
-
-        func addDirectory(relativePath: String, fullPath: String) {
-            let dirName = relativePath.hasSuffix("/") ? relativePath : relativePath + "/"
-            let nameData = Data(dirName.utf8)
-            let offset = UInt32(zipData.count)
-
-            var header = Data()
-            header.append(contentsOf: [0x50, 0x4B, 0x03, 0x04])
-            header.append(contentsOf: writeUInt16(20))
-            header.append(contentsOf: writeUInt16(0))
-            header.append(contentsOf: writeUInt16(0))
-            header.append(contentsOf: writeUInt16(0))
-            header.append(contentsOf: writeUInt16(0))
-            header.append(contentsOf: writeUInt32(0))
-            header.append(contentsOf: writeUInt32(0))
-            header.append(contentsOf: writeUInt32(0))
-            header.append(contentsOf: writeUInt16(UInt16(nameData.count)))
-            header.append(contentsOf: writeUInt16(0))
-
-            zipData.append(header)
-            zipData.append(nameData)
-
-            fileEntries.append((dirName, offset, 0, 0))
+        
+        guard let archive = Archive(url: destinationURL, accessMode: .create) else {
+            throw SigningError.packagingFailed("Could not create ZIP archive")
         }
-
-        func processDirectory(relativePath: String, fullPath: String) {
-            addDirectory(relativePath: relativePath, fullPath: fullPath)
-
-            guard let contents = try? fm.contentsOfDirectory(atPath: fullPath) else { return }
-            for item in contents.sorted() {
-                let itemRelative = relativePath + "/" + item
-                let itemFull = fullPath + "/" + item
-
-                var isDir: ObjCBool = false
-                fm.fileExists(atPath: itemFull, isDirectory: &isDir)
-
-                if isDir.boolValue {
-                    processDirectory(relativePath: itemRelative, fullPath: itemFull)
-                } else {
-                    addFile(relativePath: itemRelative, fullPath: itemFull)
-                }
-            }
-        }
-
-        // Process each top-level item
+        
         for item in items {
             let fullPath = baseDir + item
-            var isDir: ObjCBool = false
-            if fm.fileExists(atPath: fullPath, isDirectory: &isDir) {
-                if isDir.boolValue {
-                    processDirectory(relativePath: item, fullPath: fullPath)
-                } else {
-                    addFile(relativePath: item, fullPath: fullPath)
-                }
-            }
+            let itemURL = URL(fileURLWithPath: fullPath)
+            try archive.addEntry(with: itemURL.lastPathComponent, relativeTo: itemURL.deletingLastPathComponent())
         }
-
-        // Central directory
-        let cdOffset = UInt32(zipData.count)
-        for entry in fileEntries {
-            let nameData = Data(entry.name.utf8)
-            var cdEntry = Data()
-            cdEntry.append(contentsOf: [0x50, 0x4B, 0x01, 0x02]) // signature
-            cdEntry.append(contentsOf: writeUInt16(20)) // version made by
-            cdEntry.append(contentsOf: writeUInt16(20)) // version needed
-            cdEntry.append(contentsOf: writeUInt16(0))  // flags
-            cdEntry.append(contentsOf: writeUInt16(0))  // compression
-            cdEntry.append(contentsOf: writeUInt16(0))  // mod time
-            cdEntry.append(contentsOf: writeUInt16(0))  // mod date
-            cdEntry.append(contentsOf: writeUInt32(entry.crc))
-            cdEntry.append(contentsOf: writeUInt32(entry.size)) // compressed
-            cdEntry.append(contentsOf: writeUInt32(entry.size)) // uncompressed
-            cdEntry.append(contentsOf: writeUInt16(UInt16(nameData.count)))
-            cdEntry.append(contentsOf: writeUInt16(0))  // extra
-            cdEntry.append(contentsOf: writeUInt16(0))  // comment
-            cdEntry.append(contentsOf: writeUInt16(0))  // disk number start
-            cdEntry.append(contentsOf: writeUInt16(0))  // internal attrs
-            cdEntry.append(contentsOf: writeUInt32(0))  // external attrs
-            cdEntry.append(contentsOf: writeUInt32(entry.offset)) // offset
-
-            centralDirectory.append(cdEntry)
-            centralDirectory.append(nameData)
-        }
-
-        // End of central directory
-        let cdSize = UInt32(centralDirectory.count)
-        zipData.append(centralDirectory)
-
-        var eocd = Data()
-        eocd.append(contentsOf: [0x50, 0x4B, 0x05, 0x06]) // signature
-        eocd.append(contentsOf: writeUInt16(0))  // disk number
-        eocd.append(contentsOf: writeUInt16(0))  // disk with CD
-        eocd.append(contentsOf: writeUInt16(UInt16(fileEntries.count)))
-        eocd.append(contentsOf: writeUInt16(UInt16(fileEntries.count)))
-        eocd.append(contentsOf: writeUInt32(cdSize))
-        eocd.append(contentsOf: writeUInt32(cdOffset))
-        eocd.append(contentsOf: writeUInt16(0))  // comment length
-
-        zipData.append(eocd)
-
-        try zipData.write(to: URL(fileURLWithPath: zipPath))
     }
 
     // MARK: - Info.plist Modification
