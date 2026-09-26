@@ -16,9 +16,9 @@ public:
               bool bCheck);
 };
 
-class ZAppBundle {
+class ZBundle {
 public:
-    ZAppBundle();
+    ZBundle();
     bool SignFolder(ZSignAsset* zsa, 
                     const std::string& strFolder, 
                     const std::string& strBundleId, 
@@ -57,9 +57,9 @@ public:
         return NO;
     }
     
-    // Khởi tạo ZAppBundle
-    ZAppBundle bundle;
-    std::string strFolder = ipaPath.UTF8String; // ipaPath should ideally be the unzipped folder for ZAppBundle
+    // Khởi tạo ZBundle
+    ZBundle bundle;
+    std::string strFolder = ipaPath.UTF8String; // ipaPath should ideally be the unzipped folder for ZBundle
     std::string strBundleId = bundleId ? bundleId.UTF8String : "";
     std::string strDisplayName = bundleName ? bundleName.UTF8String : "";
     std::string strBundleVersion = "";
@@ -67,8 +67,6 @@ public:
     std::vector<std::string> arrRemoveDylibNames;
     
     // Gọi lệnh ký của zsign (SignFolder)
-    // Lưu ý: zsign thường extract IPA ra thư mục Payload, SignFolder, sau đó Zip lại.
-    // Nếu ipaPath là một thư mục giải nén, chúng ta có thể truyền trực tiếp.
     bool bRet = bundle.SignFolder(&zsa, strFolder, strBundleId, strBundleVersion, strDisplayName, arrDylibFiles, arrRemoveDylibNames, true, false, false, false);
     
     return bRet ? YES : NO;
