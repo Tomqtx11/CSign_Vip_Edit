@@ -2,6 +2,7 @@ import UIKit
 
 class SigningViewController: UIViewController {
     
+    var ipaFile: IPAFile?
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
     
     override func viewDidLoad() {
@@ -71,18 +72,39 @@ extension SigningViewController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: "Cell")
         
-        if indexPath.section == 3 {
+        if indexPath.section == 0 {
+            if indexPath.row == 0 {
+                cell.textLabel?.text = "Name"
+                cell.detailTextLabel?.text = ipaFile?.bundleName ?? "Unknown"
+            } else if indexPath.row == 1 {
+                cell.textLabel?.text = "Bundle ID"
+                cell.detailTextLabel?.text = ipaFile?.bundleIdentifier ?? "Unknown"
+            } else if indexPath.row == 2 {
+                cell.textLabel?.text = "Version"
+                cell.detailTextLabel?.text = ipaFile?.version ?? "1.0"
+            }
+        }
+        else if indexPath.section == 1 {
+            cell.textLabel?.text = "Select Certificate"
+            cell.accessoryType = .disclosureIndicator
+        }
+        else if indexPath.section == 2 {
+            cell.textLabel?.text = "Select Profile"
+            cell.accessoryType = .disclosureIndicator
+        }
+        else if indexPath.section == 3 {
             let toggle = UISwitch()
             cell.accessoryView = toggle
             switch indexPath.row {
             case 0: cell.textLabel?.text = "Remove App Extensions"
             case 1: cell.textLabel?.text = "Remove Supported Devices"
-            case 2: cell.textLabel?.text = "Enable File Sharing"
+            case 2: cell.textLabel?.text = "Enable File Sharing"; toggle.isOn = true
             case 3: cell.textLabel?.text = "Remove URL Schemes"
             default: break
             }
-        } else {
-            cell.textLabel?.text = "Setting \(indexPath.row)"
+        } else if indexPath.section == 4 {
+            cell.textLabel?.text = "Inject Dylib"
+            cell.accessoryType = .disclosureIndicator
         }
         
         return cell

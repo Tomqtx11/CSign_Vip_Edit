@@ -6,6 +6,11 @@ options:
   xcodeVersion: "16.0"
   generateEmptyDirectories: true
 
+packages:
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation.git
+    from: 0.9.19
+
 settings:
   base:
     PRODUCT_BUNDLE_IDENTIFIER: com.csign.app
@@ -26,6 +31,8 @@ targets:
       - path: CSign
         excludes:
           - "**/*.md"
+    dependencies:
+      - package: ZIPFoundation
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.csign.app
