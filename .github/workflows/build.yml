@@ -1,0 +1,63 @@
+name: Build CSign IPA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      
+      - name: Generate Xcode Project
+        run: xcodegen generate
+      
+      - name: Build
+        run: |
+          xcodebuild archive \
+            -project CSign.xcodeproj \
+            -scheme CSign \
+            -configuration Release \
+            -archivePath build/CSign.xcarchive \
+            -destination 'generic/platform=iOS' \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM=""
+      
+      - name: Create IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/CSign.xcarchive/Products/Applications/CSign.app build/Payload/
+          cd build && zip -r CSign.ipa Payload/
+      
+      - name: Install ldid
+        run: brew install ldid
+      
+      - name: Fakesign IPA
+        run: |
+          cd build
+          unzip CSign.ipa -d fakesign
+          ldid -S fakesign/Payload/CSign.app/CSign
+          cd fakesign && zip -r ../CSign-signed.ipa Payload/
+      
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: CSign-IPA
+          path: build/CSign-signed.ipa
+      
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/CSign-signed.ipa
