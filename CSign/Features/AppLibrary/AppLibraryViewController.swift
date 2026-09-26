@@ -56,8 +56,14 @@ class AppLibraryViewController: UIViewController {
     }
     
     private func openDocumentPicker() {
-        let types: [String] = ["com.apple.itunes.ipa", "public.zip-archive"]
-        let picker = UIDocumentPickerViewController(documentTypes: types, in: .import)
+        var picker: UIDocumentPickerViewController
+        if #available(iOS 14.0, *) {
+            let types = [UTType(filenameExtension: "ipa")!, UTType.zip]
+            picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
+        } else {
+            let types: [String] = ["com.apple.itunes.ipa", "public.zip-archive", "public.data"]
+            picker = UIDocumentPickerViewController(documentTypes: types, in: .import)
+        }
         picker.delegate = self
         present(picker, animated: true)
     }
