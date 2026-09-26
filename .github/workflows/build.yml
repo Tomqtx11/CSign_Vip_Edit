@@ -14,6 +14,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
+      - name: Cache Xcode DerivedData
+        uses: actions/cache@v4
+        with:
+          path: build/DerivedData
+          key: ${{ runner.os }}-xcode-deriveddata-${{ hashFiles('project.yml', '**/*.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-deriveddata-
+      
       - name: Install XcodeGen
         run: brew install xcodegen
       
@@ -27,6 +35,7 @@ jobs:
             -scheme CSign \
             -configuration Release \
             -archivePath build/CSign.xcarchive \
+            -derivedDataPath build/DerivedData \
             -destination 'generic/platform=iOS' \
             -sdk iphoneos \
             CODE_SIGN_IDENTITY="" \
