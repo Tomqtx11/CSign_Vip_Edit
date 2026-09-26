@@ -37,9 +37,17 @@ targets:
     dependencies:
       - package: ZIPFoundation
       - package: OpenSSL
+      - sdk: usr/lib/libz.tbd
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.csign.app
         INFOPLIST_FILE: CSign/Resources/Info.plist
         GENERATE_INFOPLIST_FILE: false
-        SWIFT_OBJC_BRIDGING_HEADER: ""
+        SWIFT_OBJC_BRIDGING_HEADER: "CSign/Supporting Files/CSign-Bridging-Header.h"
+        HEADER_SEARCH_PATHS: 
+          - $(inherited)
+          - "${SRCROOT}/CSign/Core/Signing/zsign_core"
+        ENABLE_BITCODE: false
+        OTHER_CPLUSPLUSFLAGS:
+          - $(inherited)
+          - "-std=c++11"
