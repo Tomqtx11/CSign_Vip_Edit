@@ -97,7 +97,29 @@ class SigningProgressViewController: UIViewController, IPASignerDelegate {
             self.progressView.progress = 1.0
             self.stepLabel.text = "Finished!"
             self.logTextView.text += log + "\n"
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(self.finishTapped))
+            
+            // Thêm nút Cài đặt (Install) và Xong (Done)
+            let installItem = UIBarButtonItem(title: "Install", style: .done, target: self, action: #selector(self.installTapped(_:)))
+            self.navigationItem.rightBarButtonItems = [installItem]
+            
+            // Lưu lại đường dẫn IPA để cài
+            self.signedIPAPathToInstall = signedIPAPath
+        }
+    }
+    
+    private var signedIPAPathToInstall: String?
+    
+    @objc private func installTapped(_ sender: Any) {
+        guard let path = signedIPAPathToInstall else { return }
+        self.stepLabel.text = "Starting local server for OTA..."
+        OTAInstaller.shared.installApp(ipaPath: path, bundleId: "com.csign.app", bundleName: "SignedApp") { success, message in
+            DispatchQueue.main.async {
+                if success {
+                    self.stepLabel.text = "Installation triggered!"
+                } else {
+                    self.stepLabel.text = "OTA Failed: \(message ?? "")"
+                }
+            }
         }
     }
     
