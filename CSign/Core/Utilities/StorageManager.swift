@@ -6,12 +6,16 @@ class StorageManager {
     private let fileManager = FileManager.default
     private let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     
-    private let ipaLibraryPath: URL
-    private let signedAppsPath: URL
-    private let certificatesPath: URL
-    private let provisionsPath: URL
+    public let ipaLibraryPath: URL
+    public let signedAppsPath: URL
+    public let certificatesPath: URL
+    public let provisionsPath: URL
     
     private init() {
+    var ipaLibraryDirectory: String { ipaLibraryPath.path }
+    var signedAppsDirectory: String { signedAppsPath.path }
+    var certificatesDirectory: String { certificatesPath.path }
+    var provisionsDirectory: String { provisionsPath.path }
         ipaLibraryPath = documentsDirectory.appendingPathComponent("IPALibrary")
         signedAppsPath = documentsDirectory.appendingPathComponent("SignedApps")
         certificatesPath = documentsDirectory.appendingPathComponent("Certificates")

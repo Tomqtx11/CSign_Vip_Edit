@@ -1,6 +1,7 @@
 import Foundation
 import Security
 import CommonCrypto
+import Compression
 
 // MARK: - IPASigner Delegate
 protocol IPASignerDelegate: AnyObject {

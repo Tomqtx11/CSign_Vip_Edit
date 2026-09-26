@@ -3,7 +3,6 @@ import UIKit
 // MARK: - CertificateCell
 class CertificateCell: UITableViewCell {
 
-    static let reuseIdentifier = "CertificateCell"
 
     private let iconImageView: UIImageView = {
         let iv = UIImageView()

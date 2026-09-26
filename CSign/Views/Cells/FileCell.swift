@@ -1,7 +1,6 @@
 import UIKit
 
 class FileCell: UITableViewCell {
-    static let reuseIdentifier = "FileCell"
     
     private let iconView = UIImageView()
     private let titleLabel = UILabel()

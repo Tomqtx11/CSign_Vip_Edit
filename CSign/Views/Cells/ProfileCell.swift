@@ -3,7 +3,6 @@ import UIKit
 // MARK: - ProfileCell
 class ProfileCell: UITableViewCell {
 
-    static let reuseIdentifier = "ProfileCell"
 
     private let iconImageView: UIImageView = {
         let iv = UIImageView()
