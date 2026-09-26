@@ -1,6 +1,10 @@
 import UIKit
 
-class SigningProgressViewController: UIViewController {
+class SigningProgressViewController: UIViewController, IPASignerDelegate {
+    
+    var ipaFile: IPAFile?
+    var options: IPASigner.SigningOptions?
+    private let signer = IPASigner()
     
     private let progressView = ProgressView()
     private let stepLabel: UILabel = {
@@ -8,7 +12,7 @@ class SigningProgressViewController: UIViewController {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.font = .systemFont(ofSize: 18, weight: .semibold)
         label.textAlignment = .center
-        label.text = "Extracting IPA..."
+        label.text = "Preparing..."
         return label
     }()
     
@@ -30,6 +34,8 @@ class SigningProgressViewController: UIViewController {
         navigationController?.interactivePopGestureRecognizer?.isEnabled = false
         navigationItem.hidesBackButton = true
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(cancelTapped))
+        
+        startSigning()
     }
     
     private func setupUI() {
@@ -58,8 +64,52 @@ class SigningProgressViewController: UIViewController {
         ])
     }
     
+    private func startSigning() {
+        guard let ipaFile = ipaFile, let options = options else {
+            stepLabel.text = "Error: Missing data"
+            return
+        }
+        
+        signer.delegate = self
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.signer.sign(ipa: ipaFile, options: options)
+        }
+    }
+    
     @objc private func cancelTapped() {
-        // Cancel signing process
+        signer.cancel()
         navigationController?.popViewController(animated: true)
+    }
+    
+    func signerDidUpdateProgress(_ progress: Float, message: String) {
+        DispatchQueue.main.async {
+            self.stepLabel.text = message
+            self.progressView.progress = CGFloat(progress)
+            self.logTextView.text += message + "\n"
+            
+            let range = NSMakeRange(self.logTextView.text.count - 1, 1)
+            self.logTextView.scrollRangeToVisible(range)
+        }
+    }
+    
+    func signerDidComplete(signedIPAPath: String, log: String) {
+        DispatchQueue.main.async {
+            self.progressView.progress = 1.0
+            self.stepLabel.text = "Finished!"
+            self.logTextView.text += log + "\n"
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(self.finishTapped))
+        }
+    }
+    
+    func signerDidFail(error: Error, log: String) {
+        DispatchQueue.main.async {
+            self.stepLabel.text = "Failed"
+            self.logTextView.text += "Error: \(error.localizedDescription)\n" + log + "\n"
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: self, action: #selector(self.cancelTapped))
+        }
+    }
+    
+    @objc private func finishTapped() {
+        dismiss(animated: true)
     }
 }

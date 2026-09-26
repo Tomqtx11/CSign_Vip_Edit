@@ -37,7 +37,34 @@ class SigningViewController: UIViewController {
     }
     
     @objc private func startTapped() {
+        guard let ipa = ipaFile else { return }
+        
+        let certs = StorageManager.shared.loadCertificates()
+        guard let cert = certs.first else {
+            let alert = UIAlertController(title: "Error", message: "Please import a certificate in the Certs tab first.", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+        
+        let profiles = StorageManager.shared.loadProfiles()
+        let profile = profiles.first
+        
+        let options = IPASigner.SigningOptions(
+            certificate: cert,
+            profile: profile,
+            newBundleId: ipa.bundleIdentifier,
+            newDisplayName: ipa.bundleName,
+            removePlugins: false,
+            removeSupportedDevices: false,
+            removeURLSchemes: false,
+            thinning: false,
+            fileSharingEnabled: true
+        )
+        
         let progressVC = SigningProgressViewController()
+        progressVC.ipaFile = ipa
+        progressVC.options = options
         navigationController?.pushViewController(progressVC, animated: true)
     }
 }
