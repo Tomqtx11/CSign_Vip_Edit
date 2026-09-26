@@ -50,15 +50,16 @@ class SigningViewController: UIViewController {
         let profiles = StorageManager.shared.loadProfiles()
         let profile = profiles.first
         
+        let pwd = KeychainHelper.load(forKey: "csign.cert.\(cert.id)") ?? ""
         let options = IPASigner.SigningOptions(
             certificate: cert,
+            certificatePassword: pwd,
             profile: profile,
             newBundleId: ipa.bundleIdentifier,
             newDisplayName: ipa.bundleName,
             removePlugins: false,
             removeSupportedDevices: false,
             removeURLSchemes: false,
-            thinning: false,
             fileSharingEnabled: true
         )
         
