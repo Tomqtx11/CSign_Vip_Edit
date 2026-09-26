@@ -11,11 +11,13 @@ class StorageManager {
     public let certificatesPath: URL
     public let provisionsPath: URL
     
-    private init() {
+
     var ipaLibraryDirectory: String { ipaLibraryPath.path }
     var signedAppsDirectory: String { signedAppsPath.path }
     var certificatesDirectory: String { certificatesPath.path }
     var provisionsDirectory: String { provisionsPath.path }
+
+    private init() {
         ipaLibraryPath = documentsDirectory.appendingPathComponent("IPALibrary")
         signedAppsPath = documentsDirectory.appendingPathComponent("SignedApps")
         certificatesPath = documentsDirectory.appendingPathComponent("Certificates")
